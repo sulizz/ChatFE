@@ -1,16 +1,52 @@
 import { useState } from 'react'
+import axios from 'axios';
+import { useNavigate } from "react-router-dom";
+import { authBaseUrl } from "./Url";
+
+export const USER_TYPES = {
+    User: 'User',
+    Enterprise: 'Enterprise'
+};
 
 export const Login = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+    const [email, setEmail] = useState('orgsuliz2@appboxtech.com');
+    const [password, setPassword] = useState('123456');
+    const [type, setType] = useState('');
 
-    const handleSubmit = () => { }
+    const handleSubmit = async () => {
+        try {
+            const payload = {
+                "username": email,
+                password
+            };
+            if (type === USER_TYPES.Enterprise) {
+                payload.type = type;
+
+            }
+            const response = await axios.post(authBaseUrl + 'login', payload)
+            const { access_token } = response.data;
+            navigate('/userProfile', { state: { token: access_token, type: type }, });
+        }
+        catch (error) {
+            console.error('Error during login', error);
+        }
+    }
     return (
         <div>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+            <select value={email} onChange={(e) => setEmail(e.target.value)}>
+                <option>Select Type</option>
+                <option value={"orgsuliz2@appboxtech.com"}>orgsuliz2@appboxtech.com</option>
+                <option value={"sulizbasnet@appboxtech.com"}>sulizbasnet22@appboxtech.com</option>
+
+            </select>
             <br />
             <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
             <br />
+            <select value={type} onChange={(e) => setType(e.target.value)}>
+                <option>Select Type</option>
+                <option value={USER_TYPES.Enterprise}>{USER_TYPES.Enterprise}</option>
+            </select>
             <button onClick={handleSubmit}>Log In</button>
         </div>
     )
