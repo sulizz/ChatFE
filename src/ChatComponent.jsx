@@ -9,6 +9,7 @@ export const ChatComponent = ({ name, id, token }) => {
     const [connection, setConnection] = useState(null);
     const [messages, setMessages] = useState([]);
     const [messageToBeSent, setmessageToBeSent] = useState('');
+    const [editedMessage, setEditedMessage] = useState('');
     const [recipientId, setRecipientId] = useState('');
 
     useEffect(() => {
@@ -46,12 +47,14 @@ export const ChatComponent = ({ name, id, token }) => {
                     });
 
                     newConnection.on('ReceiveDelivered', (deliveredMessage) => {
+                        console.log("---ReceiveDelivered is called", deliveredMessage)
+
                         setMessages(prevMessages => {
                             return prevMessages.map(msg => {
                                 if (msg.id === deliveredMessage.id) {
                                     return {
                                         ...msg,
-                                        isDelivered: true
+                                        isDelivered: deliveredMessage.isDelivered
                                     };
                                 }
                                 return msg;
@@ -60,12 +63,14 @@ export const ChatComponent = ({ name, id, token }) => {
                     });
 
                     newConnection.on('ReceiveSeen', (deliveredMessage) => {
+                        console.log("---ReceiveSeen is called", deliveredMessage)
+
                         setMessages(prevMessages => {
                             return prevMessages.map(msg => {
                                 if (msg.id === deliveredMessage.id) {
                                     return {
                                         ...msg,
-                                        isRead: true
+                                        isRead: deliveredMessage.isRead
                                     };
                                 }
                                 return msg;
@@ -78,6 +83,21 @@ export const ChatComponent = ({ name, id, token }) => {
                             return prevMessages.filter(msg => msg.id !== message.id)
                         });
                     });
+
+                    newConnection.on('ReceiveEdit', (editedMessage) => {
+                        console.log("---ReceiveEdit called", editedMessage)
+                        setMessages(prevMessages => {
+                            return prevMessages.map(msg => {
+                                if (msg.id === editedMessage.id) {
+                                    return {
+                                        ...msg,
+                                        messageContent: editedMessage.messageContent
+                                    };
+                                }
+                                return msg;
+                            });
+                        });
+                    })
                 })
 
                 .catch(e => console.log('Connection failed: ', e));
@@ -87,6 +107,8 @@ export const ChatComponent = ({ name, id, token }) => {
             console.log("... onConnectedAsync end")
 
             return () => {
+                console.log("...CONNECTION STOP CALLED....")
+
                 newConnection.stop();
             };
         }
@@ -110,6 +132,24 @@ export const ChatComponent = ({ name, id, token }) => {
             console.error("----sendMessageError-----", error);
         }
     };
+
+    const editMessage = async (id) => {
+        try {
+            if (connection) {
+                console.log("Attempting to Edit message: ", editedMessage, id);
+                const messageRequest = {
+                    MessageContent: editedMessage,
+                    MessageId: id
+                };
+
+                await connection.invoke('SendEdit', messageRequest);
+                console.log("Edit Message: sent ",);
+                setEditedMessage('');
+            }
+        } catch (error) {
+            console.error("----Edit Message Error-----", error);
+        }
+    }
 
     const viewMessage = async (messageId) => {
         try {
@@ -162,31 +202,51 @@ export const ChatComponent = ({ name, id, token }) => {
                 />
                 <button onClick={sendMessage}>Send</button>
             </div>
+            <br />
             <div>
                 {messages.map(msg => (
                     <div key={msg.id}>
-                        {msg.messageContent} {" "}
-                        {msg.senderId === id ? msg.isDelivered ? " Delivered " : "Not-Delivered " : ''}
+                        <p>
+                            {msg.senderId} {" ===> "}
+                            {msg.messageContent} {" "}
+                        </p>
+                        <div>
+                            <span><strong>Message Status:</strong></span>
+                            {msg.senderId === id ? msg.isDelivered ? <span><u>Delivered</u></span> : <span><u>Not Delivered</u></span> : ''}
+                            {" "}
+                            {msg.senderId === id ?
+                                msg.isRead ? <span><u>Read</u></span> : <span><u>Not Read</u></span>
+                                :
+                                <>
+                                    <button onClick={() => viewMessage(msg.id)}>View</button>
+                                </>
+                            }
+                        </div>
                         {msg.senderId === id ?
-                            msg.isRead
-                                ? " Read " : " Not-Read " :
-                            <span onClick={() => viewMessage(msg.id)}>
-                                View
-                            </span>
-                        }
+                            <>
+                                <input
+                                    type="text"
+                                    value={editedMessage}
+                                    onChange={(e) => setEditedMessage(e.target.value)}
+                                    placeholder={msg.messageContent}
+                                />
+                                <button onClick={() => editMessage(msg.id)}>Edit Message</button>
+                            </>
+                            : ''}
+                        <br />
                         {msg.senderId === id ?
                             <span>
-                                <span onClick={() => deleteForBoth(msg.id)}>Delete for both </span>
-                                <span onClick={() => deleteForSelf(msg.id)}>Delete for me </span>
+                                <button onClick={() => deleteForBoth(msg.id)}>Delete for both </button>
+                                <button onClick={() => deleteForSelf(msg.id)}>Delete for me </button>
                             </span>
                             :
-                            <span onClick={() => deleteForSelf(msg.id)}> Delete for me </span>
+                            <button onClick={() => deleteForSelf(msg.id)}> Delete for me </button>
                         }
                         <p>----------------------------------------------</p>
                     </div>
                 ))}
             </div>
-        </div>
+        </div >
     );
 
 }
