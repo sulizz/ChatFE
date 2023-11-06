@@ -11,7 +11,7 @@ export const ChatComponent = ({ name, id, token }) => {
     const [messageToBeSent, setmessageToBeSent] = useState('');
     const [editedMessage, setEditedMessage] = useState('');
     const [recipientId, setRecipientId] = useState('');
-
+    const [quotedMessageId, setQuotedMessageId] = useState('');
     useEffect(() => {
         if (id) {
             console.log("...HubConnectionBuilder started");
@@ -36,14 +36,33 @@ export const ChatComponent = ({ name, id, token }) => {
                         setMessages(prevMessages => [...prevMessages, message]);
 
                         // Invoke SendDelivered here after receiving the message
-                        const messageId = message.id;
-                        newConnection.invoke('SendDelivered', messageId)
-                            .then(() => {
-                                console.log('SendDelivered method invoked successfully for id: ', messageId);
-                            })
-                            .catch(error => {
-                                console.error('Error invoking SendDelivered method:', error);
-                            });
+                        if (message.receiverId === id) {
+                            const messageId = message.id;
+                            newConnection.invoke('SendDelivered', messageId)
+                                .then(() => {
+                                    console.log('*****SendDelivered method invoked successfully for id: ', messageId);
+                                })
+                                .catch(error => {
+                                    console.error('*****Error invoking SendDelivered method:', error);
+                                });
+                        }
+                    });
+
+                    newConnection.on('ReceiveQuoteInReply', (message) => {
+                        console.log("message", message);
+                        setMessages(prevMessages => [...prevMessages, message]);
+
+                        // Invoke SendDelivered here after receiving the message
+                        if (message.receiverId === id) {
+                            const messageId = message.id;
+                            newConnection.invoke('SendDelivered', messageId)
+                                .then(() => {
+                                    console.log('*****SendDelivered method invoked successfully for id: ', messageId);
+                                })
+                                .catch(error => {
+                                    console.error('*****Error invoking SendDelivered method:', error);
+                                });
+                        }
                     });
 
                     newConnection.on('ReceiveDelivered', (deliveredMessage) => {
@@ -54,7 +73,7 @@ export const ChatComponent = ({ name, id, token }) => {
                                 if (msg.id === deliveredMessage.id) {
                                     return {
                                         ...msg,
-                                        isDelivered: deliveredMessage.isDelivered
+                                        isDelivered: true
                                     };
                                 }
                                 return msg;
@@ -70,7 +89,7 @@ export const ChatComponent = ({ name, id, token }) => {
                                 if (msg.id === deliveredMessage.id) {
                                     return {
                                         ...msg,
-                                        isRead: deliveredMessage.isRead
+                                        isRead: true
                                     };
                                 }
                                 return msg;
@@ -132,6 +151,23 @@ export const ChatComponent = ({ name, id, token }) => {
             console.error("----sendMessageError-----", error);
         }
     };
+
+    const sendQuotedMessage = async () => {
+        try {
+            if (connection) {
+                console.log("Attempting to send Quoted Message:", recipientId, messageToBeSent);
+                const messageRequest = {
+                    ReceiverId: recipientId,
+                    MessageContent: messageToBeSent,
+                    QuotedMessageId: quotedMessageId
+                }
+                await connection.invoke('SendQuoteInReply', messageRequest);
+            }
+
+        } catch (error) {
+            console.error("----sendQuotedMessageError-----", error);
+        }
+    }
 
     const editMessage = async (id) => {
         try {
@@ -201,15 +237,31 @@ export const ChatComponent = ({ name, id, token }) => {
                     placeholder="Type your message..."
                 />
                 <button onClick={sendMessage}>Send</button>
+                <p>Reply To A Message</p>
+                <input
+                    type="text"
+                    value={quotedMessageId}
+                    onChange={(e) => setQuotedMessageId(e.target.value)}
+                    placeholder="Id"
+                />
+                <button onClick={sendQuotedMessage}>send quoted message</button>
+
             </div>
             <br />
             <div>
                 {messages.map(msg => (
                     <div key={msg.id}>
-                        <p>
-                            {msg.senderId} {" ===> "}
-                            {msg.messageContent} {" "}
-                        </p>
+                        {msg.quotedMessageId === null ?
+                            <p>
+                                {msg.senderId} {" ===> "}
+                                {msg.messageContent} {" "}
+                            </p>
+                            :
+                            <p>
+                                {msg.senderId} {" ===> "}
+                                {"Original: "} {" "}{msg.quotedMessageContent} {" ||| "}
+                                {"Reply"} {" "} {msg.messageContent} {" "}
+                            </p>}
                         <div>
                             <span><strong>Message Status:</strong></span>
                             {msg.senderId === id ? msg.isDelivered ? <span><u>Delivered</u></span> : <span><u>Not Delivered</u></span> : ''}

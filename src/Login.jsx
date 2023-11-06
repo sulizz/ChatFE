@@ -10,7 +10,7 @@ export const USER_TYPES = {
 
 export const Login = () => {
     const navigate = useNavigate();
-    const [email, setEmail] = useState('orgsuliz2@appboxtech.com');
+    const [email, setEmail] = useState('sulizbasnet@appboxtech.com');
     const [password, setPassword] = useState('123456');
     const [type, setType] = useState('');
 
@@ -36,9 +36,9 @@ export const Login = () => {
         <div>
             <select value={email} onChange={(e) => setEmail(e.target.value)}>
                 <option>Select Type</option>
-                <option value={"orgsuliz2@appboxtech.com"}>orgsuliz2@appboxtech.com</option>
-                <option value={"sulizbasnet@appboxtech.com"}>sulizbasnet22@appboxtech.com</option>
-
+                <option value={"sulizbasnet@appboxtech.com"}>Enterprise suliz</option>
+                <option value={"sulizbasnet100@appboxtech.com"}>user suliz1</option>
+                <option value={"usersulizbasnet@appboxtech.com"}>user suliz2</option>
             </select>
             <br />
             <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
