@@ -12,6 +12,7 @@ export const ChatComponent = ({ name, id, token }) => {
     const [editedMessage, setEditedMessage] = useState('');
     const [recipientId, setRecipientId] = useState('');
     const [quotedMessageId, setQuotedMessageId] = useState('');
+
     useEffect(() => {
         if (id) {
             console.log("...HubConnectionBuilder started");
@@ -98,8 +99,20 @@ export const ChatComponent = ({ name, id, token }) => {
                     });
 
                     newConnection.on('ReceiveDeleted', (message) => {
+                        console.log("---ReceiveDeleted is called", message)
+
                         setMessages(prevMessages => {
-                            return prevMessages.filter(msg => msg.id !== message.id)
+                            return prevMessages.map(msg => {
+                                if (msg.id === message.id) {
+                                    // Check the deletion status and update message content accordingly
+                                    if (message.deletedForSelf && !message.deletedForBoth) {
+                                        return { ...msg, messageContent: "This message has been deleted for you." };
+                                    } else if (message.deletedForBoth) {
+                                        return { ...msg, messageContent: "This message has been deleted for both." };
+                                    }
+                                }
+                                return msg;
+                            });
                         });
                     });
 
@@ -116,6 +129,23 @@ export const ChatComponent = ({ name, id, token }) => {
                                 return msg;
                             });
                         });
+                    })
+
+                    newConnection.on('ReceiveRestoreMessage', (message) => {
+                        console.log("---ReceiveRestoreMessage is called", message)
+
+                        setMessages(prevMessages => {
+                            return prevMessages.map(msg => {
+                                if (msg.id === message.id) {
+                                    return msg;
+                                }
+                                return msg;
+                            });
+                        });
+                    });
+
+                    newConnection.on("ReceiveUnreadCount", (count) => {
+                        console.log("---ReceiveUnreadCount is called", count)
                     })
                 })
 
@@ -213,13 +243,45 @@ export const ChatComponent = ({ name, id, token }) => {
     const deleteForSelf = async (messageId) => {
         try {
             if (connection) {
-                console.log("Attempting to delete message for both:", messageId);
+                console.log("Attempting to delete message for self:", messageId);
                 await connection.invoke('DeleteSelf', messageId);
             }
         } catch (error) {
             console.log("*** Error while deleting ", error);
         }
     }
+
+    const restoreMessage = async (messageId) => {
+        const messageRestoreRequest = {
+            MessageId: messageId,
+            RequestDate: new Date().toISOString()
+        };
+
+        try {
+            if (connection) {
+                console.log("Attempting to Restore message:", messageRestoreRequest);
+                await connection.invoke('SendRestoreMessage', messageRestoreRequest);
+            }
+        } catch (error) {
+            console.log("*** Error while Restoring ", error);
+        }
+    }
+
+    const fetchUnreadCount = async () => {
+        try {
+            if (connection) {
+                console.log("Attempting to fetch UnreadCount:");
+                await connection.invoke('SendUnreadCount');
+            }
+        } catch (error) {
+            console.log("*** Error while Fetching Unread Count", error);
+
+        }
+    }
+
+    useEffect(() => {
+        fetchUnreadCount()
+    }, []);
 
     return (
         <div>
@@ -290,9 +352,14 @@ export const ChatComponent = ({ name, id, token }) => {
                             <span>
                                 <button onClick={() => deleteForBoth(msg.id)}>Delete for both </button>
                                 <button onClick={() => deleteForSelf(msg.id)}>Delete for me </button>
+                                <button onClick={() => restoreMessage(msg.id)}>Restore message</button>
                             </span>
                             :
-                            <button onClick={() => deleteForSelf(msg.id)}> Delete for me </button>
+                            <span>
+                                <button onClick={() => deleteForSelf(msg.id)}> Delete for me </button>
+                                <button onClick={() => restoreMessage(msg.id)}>Restore message</button>
+                            </span>
+
                         }
                         <p>----------------------------------------------</p>
                     </div>
