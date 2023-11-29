@@ -12,6 +12,15 @@ export const ChatComponent = ({ name, id, token }) => {
     const [editedMessage, setEditedMessage] = useState('');
     const [recipientId, setRecipientId] = useState('');
     const [quotedMessageId, setQuotedMessageId] = useState('');
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [processedMessageIds, setProcessedMessageIds] = useState(new Set());
+
+    const addMessageIfNew = (message) => {
+        if (!processedMessageIds.has(message.id)) {
+            setMessages(prevMessages => [...prevMessages, message]);
+            setProcessedMessageIds(prevIds => new Set(prevIds.add(message.id)));
+        }
+    };
 
     useEffect(() => {
         if (id) {
@@ -34,7 +43,7 @@ export const ChatComponent = ({ name, id, token }) => {
                     // invoking ReceiveMessage here after receiving the message
                     newConnection.on('ReceiveMessage', (message) => {
                         console.log("message", message);
-                        setMessages(prevMessages => [...prevMessages, message]);
+                        addMessageIfNew(message);
 
                         // Invoke SendDelivered here after receiving the message
                         if (message.receiverId === id) {
@@ -51,7 +60,7 @@ export const ChatComponent = ({ name, id, token }) => {
 
                     newConnection.on('ReceiveQuoteInReply', (message) => {
                         console.log("message", message);
-                        setMessages(prevMessages => [...prevMessages, message]);
+                        addMessageIfNew(message);
 
                         // Invoke SendDelivered here after receiving the message
                         if (message.receiverId === id) {
@@ -137,7 +146,7 @@ export const ChatComponent = ({ name, id, token }) => {
                         setMessages(prevMessages => {
                             return prevMessages.map(msg => {
                                 if (msg.id === message.id) {
-                                    return msg;
+                                    return message;
                                 }
                                 return msg;
                             });
@@ -146,6 +155,7 @@ export const ChatComponent = ({ name, id, token }) => {
 
                     newConnection.on("ReceiveUnreadCount", (count) => {
                         console.log("---ReceiveUnreadCount is called", count)
+                        setUnreadCount(count.TotalUnreadConversationCount)
                     })
                 })
 
@@ -279,10 +289,6 @@ export const ChatComponent = ({ name, id, token }) => {
         }
     }
 
-    useEffect(() => {
-        fetchUnreadCount()
-    }, []);
-
     return (
         <div>
             <div>
@@ -308,6 +314,11 @@ export const ChatComponent = ({ name, id, token }) => {
                 />
                 <button onClick={sendQuotedMessage}>send quoted message</button>
 
+            </div>
+            <div>
+                <h3>Unread Count</h3>
+                <button onClick={fetchUnreadCount}>Fetch</button>
+                <p>{unreadCount}</p>
             </div>
             <br />
             <div>
