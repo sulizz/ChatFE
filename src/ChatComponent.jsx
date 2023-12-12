@@ -46,7 +46,7 @@ export const ChatComponent = ({ name, id, token }) => {
                         addMessageIfNew(message);
 
                         // Invoke SendDelivered here after receiving the message
-                        if (message.receiverId === id) {
+                        if (message.recipientUsers && message.recipientUsers.includes(id) || message.receiverId === id) {
                             const messageId = message.id;
                             newConnection.invoke('SendDelivered', messageId)
                                 .then(() => {
@@ -156,6 +156,14 @@ export const ChatComponent = ({ name, id, token }) => {
                     newConnection.on("ReceiveUnreadCount", (count) => {
                         console.log("---ReceiveUnreadCount is called", count)
                         setUnreadCount(count.TotalUnreadConversationCount)
+                    })
+
+                    newConnection.on("ReceiveUserOnlineStatus", (count) => {
+                        console.log("---ReceiveUserOnlineStatus is called", count)
+                    })
+
+                    newConnection.on("ReceiveTimeZone", (res) => {
+                        console.log("---ReceiveTimeZone is called", res)
                     })
                 })
 
@@ -289,6 +297,24 @@ export const ChatComponent = ({ name, id, token }) => {
         }
     }
 
+    const sendTimeZone = async () => {
+        const timezone = {
+            UserId: recipientId,
+            TimeZone: "PST"
+        }
+
+        try {
+            if (connection) {
+                console.log("Attempting to Send Time Zone:", timezone);
+                await connection.invoke('SendTimeZone', timezone);
+            }
+        }
+        catch (error) {
+            console.log("*** Error while Fetching Unread Count", error);
+
+        }
+    }
+
     return (
         <div>
             <div>
@@ -321,6 +347,9 @@ export const ChatComponent = ({ name, id, token }) => {
                 <p>{unreadCount}</p>
             </div>
             <br />
+            <div>
+                <button onClick={() => sendTimeZone()}>Send Time Zone</button>
+            </div>
             <div>
                 {messages.map(msg => (
                     <div key={msg.id}>
@@ -372,6 +401,7 @@ export const ChatComponent = ({ name, id, token }) => {
                             </span>
 
                         }
+
                         <p>----------------------------------------------</p>
                     </div>
                 ))}
