@@ -5,7 +5,8 @@ import { authBaseUrl } from "./Url";
 
 export const USER_TYPES = {
     User: 'User',
-    Enterprise: 'Enterprise'
+    Enterprise: 'Enterprise',
+    Moderator: "Moderator"
 };
 
 export const Login = () => {
@@ -20,7 +21,7 @@ export const Login = () => {
                 "username": email,
                 password
             };
-            if (type === USER_TYPES.Enterprise) {
+            if (type === USER_TYPES.Enterprise || type == USER_TYPES.Moderator) {
                 payload.type = type;
 
             }
@@ -39,6 +40,7 @@ export const Login = () => {
                 <option value={"sulizbasnet@appboxtech.com"}>Enterprise suliz</option>
                 <option value={"sulizbasnet100@appboxtech.com"}>user suliz1</option>
                 <option value={"justusersuliz21@appboxtech.com"}>user suliz2</option>
+                <option value={"veelAdmin@appboxtech.com"}>Veel Admin Suliz</option>
             </select>
             <br />
             <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
@@ -46,6 +48,7 @@ export const Login = () => {
             <select value={type} onChange={(e) => setType(e.target.value)}>
                 <option>Select Type</option>
                 <option value={USER_TYPES.Enterprise}>{USER_TYPES.Enterprise}</option>
+                <option value={USER_TYPES.Moderator}>{USER_TYPES.Moderator}</option>
             </select>
             <button onClick={handleSubmit}>Log In</button>
         </div>
